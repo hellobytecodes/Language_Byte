@@ -1,3 +1,3 @@
 <div align="center">
-  <img src="https://uploadkon.ir/uploads/f20d13_26ByteLogo.png" width="200" style="border-radius: 10;">
+  <img src="https://uploadkon.ir/uploads/f20d13_26ByteLogo.png" width="200" style="border-radius: 10px;">
 </div>

@@ -1,3 +1,1 @@
-<div style="text-align: center;">
-  <img src="https://uploadkon.ir/uploads/f20d13_26ByteLogo.png" alt="" style="width:200px;height:100px;border-radius:10px;"/>
-</div>
+<img src="https://raw.githubusercontent.com/hellobytecodes/Language_Byte/main/assets/byte_logo.png" width="200" style="border-radius: 50%;">

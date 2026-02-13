@@ -1,0 +1,9 @@
+#include("color")
+
+-- سوال قرمز، محلی که کاربر تایپ می‌کند سبز
+local target = input(color.red .. "Target IP: " .. color.green)
+
+-- بعد از گرفتن ورودی، حتما ریست کن که بقیه برنامه رنگش بهم نریزه
+echo(color.reset) 
+
+echo("Scanning: " .. target)

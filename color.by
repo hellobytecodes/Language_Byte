@@ -1,0 +1,31 @@
+#include("color")
+
+local R = color.reset
+
+echo(color.bold .. color.cyan .. "\n--- [ BYTE COLOR SHOWCASE ] ---" .. R)
+
+-- ۱. نمایش رنگ‌های متن
+echo(color.red .. "Red Text " .. color.green .. "Green Text " .. color.yellow .. "Yellow Text")
+echo(color.blue .. "Blue Text " .. color.magenta .. "Magenta Text " .. color.cyan .. "Cyan Text\n")
+
+-- ۲. نمایش استایل‌ها
+echo(color.bold .. "Bold Text" .. R)
+echo(color.dim .. "Dim (Faded) Text" .. R)
+echo(color.italic .. "Italic Text" .. R)
+echo(color.underline .. "Underlined Text" .. R)
+echo(color.blink .. "Blinking Text (Wait for it...)" .. R)
+echo(color.reverse .. " Inverted Colors " .. R .. "\n")
+
+-- ۳. نمایش پس‌زمینه‌ها
+echo(color.bg_red .. color.white .. " WHITE ON RED " .. R)
+echo(color.bg_green .. color.white .. " WHITE ON GREEN " .. R)
+echo(color.bg_blue .. color.white .. " WHITE ON BLUE " .. R .. "\n")
+
+-- ۴. تست ورودی رنگی (همان‌طور که خواستی)
+echo(color.yellow .. "Enter your target domain: " .. color.green)
+local domain = input("URL: ")
+echo(R) -- ریست کردن رنگ بعد از اینپوت
+
+echo(color.bold .. "Target " .. color.cyan .. domain .. R .. " added to scan list.")
+
+echo(color.bold .. color.cyan .. "\n-------------------------------" .. R)

@@ -1,0 +1,26 @@
+#include("osb")
+
+local filename = "system_report.txt"
+echo("در حال جمع‌آوری اطلاعات سیستم...")
+
+-- ایجاد یک جدول برای ذخیره داده‌ها
+local info = {
+    "Report Date: " .. osb.time(),
+    "User: " .. osb.user(),
+    "OS: " .. osb.name(),
+    "Arch: " .. osb.arch(),
+    "CPU: " .. osb.cpu(),
+    "Path: " .. osb.pwd()
+}
+
+-- ذخیره در فایل با استفاده از دستورات سیستم (روش سریع)
+-- ما از متد run که در osb ساختیم برای تعامل با shell استفاده می‌کنیم
+osb.run("echo '--- BYTE SYSTEM REPORT ---' > " .. filename)
+
+for i, line in ipairs(info) do
+    osb.run("echo '" .. line .. "' >> " .. filename)
+end
+
+echo("گزارش با موفقیت در فایل " .. filename .. " ذخیره شد.")
+echo("محتوای پوشه فعلی بعد از ساخت گزارش:")
+osb.run("ls -lh " .. filename)

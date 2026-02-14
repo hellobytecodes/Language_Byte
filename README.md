@@ -1,3 +1,3 @@
 <p align="center">
-  <img src="ByteLogo.png" alt="ByteLogo" width="300" style="border-radius: 30px;">
+  <img src="ByteLogo.png" width="200" style="border-radius: 30px; box-shadow: 0 0 0 2px red;">
 </p>

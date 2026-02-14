@@ -1,3 +1,3 @@
 <p align="center">
-  <img src="ByteLogo.png" width="300" border="2">
+  <img src="Byte.png" width="300" border="2">
 </p>

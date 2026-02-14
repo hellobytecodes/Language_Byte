@@ -1,10 +1,3 @@
-<style>
-  .rounded-logo {
-    border-radius: 30px !important;
-    width: 200px;
-    display: block;
-    margin: 0 auto;
-  }
-</style>
-
-<img src="ByteLogo.png" class="rounded-logo">
+<p align="center">
+  <img src="ByteLogo.png" width="200" style="border-radius: 50%;">
+</p>

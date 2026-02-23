@@ -1,9 +1,0 @@
--- از ۱ تا ۵ بشمار
-for i = 1, 5 do
-    echo("Step: " .. i .. "\n")
-end
-
--- از ۱۰ تا ۰ برو (با گام منفی ۲)
-for i = 10, 0, -2 do
-    echo("Countdown: " .. i .. "\n")
-end

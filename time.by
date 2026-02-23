@@ -1,0 +1,36 @@
+#include("time")
+
+echo("=== TIME LIBRARY ===\n")
+
+-- زمان فعلی
+echo("Timestamp: ", time.now(), "\n")
+echo("Timestamp (ms): ", time.now_ms(), "\n")
+
+-- تاریخ فرمت شده
+echo("Current time: ", time.format(), "\n")
+echo("Date only: ", time.format("%Y-%m-%d"), "\n")
+echo("Time only: ", time.format("%H:%M:%S"), "\n")
+
+-- جزءهای تاریخ
+local d = time.date()
+echo("Year: ", d.year, " Month: ", d.month, " Day: ", d.day, "\n")
+
+-- تاخیر
+echo("Waiting 2 seconds...\n")
+time.sleep(2)
+echo("Done!\n")
+
+-- تایمر
+time.timer("start")
+time.sleep(1)
+echo("Elapsed: ", time.timer("stop"), " seconds\n")
+
+-- تبدیل timestamp
+local ts = 1700000000
+echo("Timestamp ", ts, " = ", time.from_timestamp(ts), "\n")
+
+-- اختلاف زمان
+local t1 = time.now()
+time.sleep(1)
+local diff = time.diff(time.now(), t1)
+echo("Difference: ", diff, " seconds\n")

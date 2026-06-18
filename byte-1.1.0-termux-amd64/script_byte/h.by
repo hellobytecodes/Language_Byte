@@ -1,8 +1,0 @@
-#include("hashcrack")
-
-local hash = "$2a$10$sNYifSeCQL.YdGV1sm1IVuSVji3HHKKJtjNB5zqHYZkNzPd2ECKmi"
-local wordlist = "wordlist.txt"
-
-local types_hash = hashcrack.identify(hash)
-
-print("Hash Type : " .. types_hash[1])

@@ -1,0 +1,113 @@
+import("httpx")
+
+print("")
+os.execute("sleep 1")
+os.execute("clear")
+
+print("")
+local url = input("Enter WordPress Site (e.g. https://example.com): ")
+
+print("")
+print("=== Scanning " .. url .. " ===\n")
+
+-- =============================================
+-- ۱. پیدا کردن یوزرنیم از REST API
+-- =============================================
+print("--- Users ---")
+local ok, res = pcall(function()
+    return httpx.get(url .. "/wp-json/wp/v2/users", {
+        timeout = 10,
+        allow_redirects = true
+    })
+end)
+
+if ok and res and res.status_code == 200 and res.json then
+    for _, user in ipairs(res.json) do
+        print("👤 " .. user.name .. " (@" .. user.slug .. ")")
+    end
+else
+    -- روش دوم: ?author=1
+    local ok2, res2 = pcall(function()
+        return httpx.get(url .. "/?author=1", {
+            timeout = 10,
+            allow_redirects = true
+        })
+    end)
+    if ok2 and res2 and res2.status_code == 301 then
+        local location = res2.headers and res2.headers["Location"]
+        if location then
+            local username = string.match(location, "/author/([^/]+)")
+            if username then
+                print("👤 " .. username)
+            end
+        end
+    else
+        print("No users found via API")
+    end
+end
+
+print("")
+
+-- =============================================
+-- ۲. پیدا کردن پلاگین‌ها
+-- =============================================
+print("--- Plugins ---")
+local plugins = {
+    "akismet",
+    "contact-form-7",
+    "woocommerce",
+    "wordpress-seo",
+    "elementor",
+    "jetpack",
+    "wordfence",
+    "wpforms",
+    "all-in-one-seo-pack",
+    "wp-super-cache",
+    "updraftplus",
+    "wp-mail-smtp",
+    "really-simple-ssl",
+    "duplicate-post",
+    "redirection",
+    "classic-editor",
+    "litespeed-cache",
+    "wp-rocket",
+    "imagify",
+    "backupbuddy",
+    "ninja-forms",
+    "gravityforms",
+    "wp-optimize",
+    "sucuri-scanner",
+    "better-wp-security",
+    "w3-total-cache",
+    "autoptimize",
+    "smush",
+    "ewww-image-optimizer",
+    "regenerate-thumbnails"
+}
+
+local found = 0
+for _, plugin in ipairs(plugins) do
+    local path = "/wp-content/plugins/" .. plugin .. "/"
+    local ok3, res3 = pcall(function()
+        return httpx.get(url .. path .. "readme.txt", {timeout = 5})
+    end)
+    
+    if ok3 and res3 then
+        if res3.status_code == 200 then
+            print("✅ " .. plugin)
+            found = found + 1
+        elseif res3.status_code == 403 then
+            print("🔒 " .. plugin .. " (exists but blocked)")
+            found = found + 1
+        end
+    end
+end
+
+if found == 0 then
+    print("No known plugins found")
+else
+    print("\nTotal: " .. found .. " plugins detected")
+end
+
+print("")
+print("Done!")

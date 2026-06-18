@@ -1,0 +1,10 @@
+import("httpx")
+
+local url = "https://github.com"
+local res = httpx.get(url)
+
+if res.status_code == 200 then
+    print("Ok")
+else
+    print("No")
+end

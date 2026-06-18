@@ -1,0 +1,151 @@
+import("netsocket")
+
+print("=== netsocket v" .. netsocket.version() .. " ===\n")
+
+--[[ ========== سراسری ========== ]]
+print("--- DNS ---")
+print("dns: " .. netsocket.dns("google.com"))
+print("dns_all: " .. #netsocket.dns_all("google.com") .. " IPs")
+print("reverse_dns: " .. netsocket.reverse_dns("8.8.8.8"))
+print()
+
+print("--- System ---")
+print("hostname: " .. netsocket.gethostname())
+print("fqdn: " .. netsocket.getfqdn())
+print("local_ip: " .. netsocket.local_ip())
+print("is_ip: " .. tostring(netsocket.is_ip("192.168.1.1")))
+print("ping:\n" .. netsocket.ping("1.1.1.1", 1))
+print()
+
+print("--- Interfaces ---")
+for _, i in pairs(netsocket.ifconfig()) do print(i.name .. " = " .. i.ip) end
+print("if_nametoindex('lo'): " .. netsocket.if_nametoindex("lo"))
+print("if_indextoname(1): " .. netsocket.if_indextoname(1))
+local ni = netsocket.if_nameindex()
+if ni then print("if_nameindex: " .. #ni .. " interfaces") end
+print()
+
+print("--- Scanner ---")
+for _, p in pairs(netsocket.scan("example.com", {80,443}) or {}) do print("scan: " .. p) end
+for _, p in pairs(netsocket.scan_range("127.0.0.1", 23450, 23453) or {}) do print("scan_range: " .. p) end
+print("is_port_open: " .. tostring(netsocket.is_port_open("example.com", 80)))
+print()
+
+print("--- HTTP ---")
+local body, code = netsocket.http("http://httpbin.org/get")
+if body then print("http: " .. code .. " - " .. string.sub(body, 1, 60) .. "...") end
+local h = netsocket.headers("http://httpbin.org/get")
+if h then print("headers: " .. h["Content-Type"] or "?") end
+netsocket.download("http://httpbin.org/get", "/tmp/demo.html")
+print("download: done")
+print()
+
+print("--- Services ---")
+print("getservbyname: " .. netsocket.getservbyname("http"))
+print("getservbyport: " .. netsocket.getservbyport(80))
+print()
+
+print("--- inet ---")
+local b = netsocket.inet_aton("10.0.0.1"); print("aton/ntoa: " .. netsocket.inet_ntoa(b))
+local b4 = netsocket.inet_pton(netsocket.AF_INET, "172.16.0.1"); print("pton/ntop v4: " .. netsocket.inet_ntop(netsocket.AF_INET, b4))
+local b6 = netsocket.inet_pton(netsocket.AF_INET6, "::1"); if b6 then print("pton/ntop v6: " .. netsocket.inet_ntop(netsocket.AF_INET6, b6)) end
+print("htonl/ntohl: " .. netsocket.htonl(1) .. "->" .. netsocket.ntohl(netsocket.htonl(1)))
+print("htons/ntohs: " .. netsocket.htons(80) .. "->" .. netsocket.ntohs(netsocket.htons(80)))
+print()
+
+--[[ ========== TCP Client ========== ]]
+print("--- TCP Client ---")
+local tcp = netsocket.tcp()
+tcp.settimeout(tcp, 5)
+if tcp.connect(tcp, "httpbin.org", 80) then
+    tcp.send(tcp, "GET /get HTTP/1.0\r\nHost: httpbin.org\r\n\r\n")
+    print("connect+send+receive: " .. tcp.receive(tcp, "*l"))
+    local ip, port = tcp.getpeername(tcp); print("getpeername: " .. ip .. ":" .. port)
+    local ip2, port2 = tcp.getsockname(tcp); print("getsockname: " .. ip2 .. ":" .. port2)
+    tcp.setoption(tcp, "keepalive", 1); print("keepalive: " .. tcp.getoption(tcp, "keepalive"))
+    tcp.setoption(tcp, "nodelay", 1); print("nodelay: ok")
+    print("gettimeout: " .. tcp.gettimeout(tcp))
+    tcp.setblocking(tcp, 1); print("setblocking: ok")
+    tcp.shutdown(tcp, 2); print("shutdown: ok")
+    tcp.close(tcp); print("close: ok")
+end
+print()
+
+--[[ sendall & sendfile ]]
+local t2 = netsocket.tcp()
+t2.settimeout(t2, 5)
+if t2.connect(t2, "httpbin.org", 80) then
+    t2.sendall(t2, "GET /get HTTP/1.0\r\nHost: httpbin.org\r\n\r\n")
+    print("sendall: ok")
+    t2.close(t2)
+end
+os.execute("echo hello > /tmp/t.txt")
+local t3 = netsocket.tcp()
+t3.settimeout(t3, 5)
+if t3.connect(t3, "httpbin.org", 80) then
+    t3.sendfile(t3, "/tmp/t.txt")
+    print("sendfile: ok")
+    t3.close(t3)
+end
+print()
+
+--[[ ========== TCP Server ========== ]]
+print("--- TCP Server ---")
+local srv = netsocket.tcp()
+if srv.bind(srv, "127.0.0.1", 55555) then
+    srv.listen(srv, 1)
+    print("bind+listen: ok")
+    srv.close(srv)
+    print("close: ok")
+end
+print()
+
+--[[ ========== TLS ========== ]]
+print("--- TLS ---")
+local tls = netsocket.tcp()
+tls.settimeout(tls, 5)
+if tls.connect(tls, "google.com", 443) then
+    tls.starttls(tls)
+    tls.send(tls, "GET / HTTP/1.1\r\nHost: google.com\r\n\r\n")
+    print("starttls+send+receive: " .. tls.receive(tls, "*l"))
+    tls.close(tls)
+end
+print()
+
+--[[ ========== UDP ========== ]]
+print("--- UDP ---")
+local udp = netsocket.udp()
+if udp.bind(udp, "127.0.0.1", 55556) then
+    udp.setoption(udp, "broadcast", 1); print("broadcast: " .. udp.getoption(udp, "broadcast"))
+    udp.setoption(udp, "reuseaddr", 1); print("reuseaddr: " .. udp.getoption(udp, "reuseaddr"))
+    udp.sendto(udp, "hello", "127.0.0.1", 55556)
+    local d, ip, p = udp.receivefrom(udp, 128); print("receivefrom: '" .. d .. "' from " .. ip .. ":" .. p)
+    local ip2, p2 = udp.getsockname(udp); print("getsockname: " .. ip2 .. ":" .. p2)
+    print("gettimeout: " .. udp.gettimeout(udp))
+    udp.settimeout(udp, 10); print("settimeout: ok")
+    udp.setblocking(udp, 1); print("setblocking: ok")
+    udp.close(udp); print("close: ok")
+end
+print()
+
+--[[ ========== Raw Socket (need root) ========== ]]
+print("--- Raw Socket ---")
+local rfd = netsocket.raw_socket(netsocket.AF_PACKET, netsocket.SOCK_RAW, netsocket.ETH_P_ALL)
+if rfd then
+    netsocket.raw_bind(rfd, "lo")
+    netsocket.raw_send(rfd, "test")
+    local data = netsocket.raw_recv(rfd, 128)
+    print("raw_recv: " .. #data .. " bytes")
+    netsocket.raw_close(rfd)
+else
+    print("raw socket needs root – skipped")
+end
+print()
+
+--[[ ========== ARP Spoof (need root) ========== ]]
+print("--- ARP Spoof ---")
+local ok = netsocket.arp_spoof("lo", "192.168.1.100", "192.168.1.1")
+print("arp_spoof: " .. tostring(ok) .. " (needs root)")
+print()
+
+print("=== All demos done! ===")

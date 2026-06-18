@@ -1,0 +1,35 @@
+import("hashcrack")
+
+local hashes = {
+    {"md4",       "db346d691d7acc4dc2625db19f9e3f52"},
+    {"md5",       "21232f297a57a5a743894a0e4a801fc3"},
+    {"sha1",      "7c4a8d09ca3762af61e59520943dc26494f8941b"},
+    {"sha224",    "ea4e06cec7141af46829b6c9e066d251cfd40a6f1a2204252d9a4763"},
+    {"sha256",    "5e884898da28047151d0e56f8dc6292773603d0d6aabbdd62a11ef721d1542d8"},
+    {"sha384",    "a8b64babd0aca91a59bdbb7761b421d4f2bb38280d3a75ba0f21f2bebc45583d446c598660c94ce680c47d19c30783a7"},
+    {"sha512",    "b109f3bbbc244eb82441917ed06d618b9008dd09b3befd1b5e07394c706a8bb980b1d7785e5976ec049b46df5f1326af5a2ea6d103fd07c95385ffab0cacbc86"},
+    {"sha3-224",  "e642824c3f8cf24ad09234ee7d2971fc8af2b8d3c6e0d1e4e2c3d6f7"},
+    {"sha3-256",  "a7ffc6f8bf1ed76651c14756a061d662f580ff4de43b49fa82d80a4b80f8434a"},
+    {"sha3-384",  "9c7d3b4e2d1f8a6c5b0e9f2a3d8c7b6e5f4a3d2c1b0e9f8a7d6c5b4e3f2a1d0c9b8a7e6d5c4b3e2f1a0"},
+    {"sha3-512",  "a8b64babd0aca91a59bdbb7761b421d4f2bb38280d3a75ba0f21f2bebc45583d446c598660c94ce680c47d19c30783a7"},
+    {"ripemd160", "5e52fee47e6b070565f74372468cdc699de89107"},
+    {"blake2b",   "cfd8f23344054e2034436ccf5f6c72ac8bcd8802d309da374fccc591d37bb0946c194796e92025d0e3b2f5d44a4a282acf9f01737f69c50cb0e005fcc3c9df08"},
+    {"blake2s",   "599bcc29cbdf334f0ff7f31389f7a4a744f968d359adce6957c929c2e5ab8e95"},
+    {"whirlpool", "45e615c89c66515690b1efe4b5ed9d7fbc10b1ffe108b0a6d13d376551594da4732720d470a83d967bf9ed8f38f5f540e04b0444d14d86a03ea62165110046a8"},
+    {"ntlm",      "209c6174da490caeb422f3fa5a7ae634"},
+    {"lm",        "c0e2f3a4b5d6e7f8a9b0c1d2e3f4a5b6"}
+}
+
+echo("🔓 شروع کرک " .. #hashes .. " هش...\n\n")
+
+for _, item in pairs(hashes) do
+    local algo, hash = item[1], item[2]
+    local r = hashcrack.crack(hash, "wordlist.txt", algo)
+    if r then
+        echo("✅ " .. algo .. " → " .. r.password .. " (" .. r.attempts .. " تلاش)\n")
+    else
+        echo("❌ " .. algo .. " → پیدا نشد\n")
+    end
+end
+
+echo("\n🎉 پایان.\n")

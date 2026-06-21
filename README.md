@@ -58,7 +58,7 @@ No, every library ever designed for this language can be fully implemented on Te
 
 Of course, it goes without saying that some libraries depend on a series of tools that you must install on Termux and then use the library
 
-# Where can I learn to use this language fully?
+# Where can I learn to fully use this language? And how to install and run it on Termux?
 Just go to the following address and read the README.md file completely. All the explanations are given in it.
 <br>
-<a href="">Document Byte</a>
+<a href="https://github.com/hellobytecodes/Language_Byte/tree/main/byte-1.1.0-termux-amd64">Document Byte</a>

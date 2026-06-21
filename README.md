@@ -52,3 +52,8 @@ For example
 And the address where the libraries for this language are currently located is at the GitHub link below so that we can create a special site for it later, but for now it is at the GitHub link below.
 <br>
 <a href="https://github.com/hellobytecodes/Byte_library">Address Library Byte 📚</a>
+
+# Are the libraries of this language designed so that they do not run on Termux, like some Python libraries, and can only be used on the system?
+No, every library ever designed for this language can be fully implemented on Termux. For example, the androidbiuld library available in this language is for direct Java coding in the byte language. By reading the documentation of this library, you can easily build an Android application in Termux and extract the apk from it or even for the Windows operating system.
+
+Of course, it goes without saying that some libraries depend on a series of tools that you must install on Termux and then use the library

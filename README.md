@@ -57,3 +57,8 @@ And the address where the libraries for this language are currently located is a
 No, every library ever designed for this language can be fully implemented on Termux. For example, the androidbiuld library available in this language is for direct Java coding in the byte language. By reading the documentation of this library, you can easily build an Android application in Termux and extract the apk from it or even for the Windows operating system.
 
 Of course, it goes without saying that some libraries depend on a series of tools that you must install on Termux and then use the library
+
+# Where can I learn to use this language fully?
+Just go to the following address and read the README.md file completely. All the explanations are given in it.
+<br>
+<a href="">Document Byte</a>

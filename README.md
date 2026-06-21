@@ -39,3 +39,13 @@ end
 echo("\n🎉 End.\n")
 ```
 The above code receives a word list path from us and then, according to the algorithm and hash type we want, it starts guessing the password in a fraction of a second and guesses as many passwords as it can to find the password, so you can see the result in a fraction of a second and it does all this with the powerful hashcrack library of the Byte programming language.
+
+# Does the Byte programming language have a package manager like Python? Is there a tool to install libraries for this language?
+In answer, I must say yes, the Byte language has a library installer package called Byteget, which you can install the libraries of this language by typing the following command in the terminal.
+```
+./byteget install <lib>
+```
+For example
+```
+./byteget install httpx
+```

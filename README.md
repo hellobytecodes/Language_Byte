@@ -62,3 +62,6 @@ Of course, it goes without saying that some libraries depend on a series of tool
 Just go to the following address and read the README.md file completely. All the explanations are given in it.
 <br>
 <a href="https://github.com/hellobytecodes/Language_Byte/tree/main/byte-1.1.0-termux-amd64">Document Byte</a>
+
+# And finally, who created this language?
+This language was created by an 18-year-old Iranian teenager who is a programmer and loves the world of computers. This language was created by one person alone, using his own knowledge and the help of artificial intelligence and AI.

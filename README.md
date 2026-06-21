@@ -1,4 +1,4 @@
-<img src="Byte.png" alt="" style="border-redius: 20px;">
+<img src="./Byte.png" alt="Byte" width="200">
 
 # Byte
 Byte Language
